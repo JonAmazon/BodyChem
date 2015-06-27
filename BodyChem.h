@@ -49,6 +49,8 @@ private:
 
 	float renalThreshold;
 	float renalTimeConst;
+	float liverThreshold;
+	float liverToSugarRate;
 	float insulinTimeConst;
 	float sugarInsulinRateConst;
 public:
@@ -72,7 +74,7 @@ public:
 	void update(BloodChem *blood, float dt);
 	void release();
 
-	float getSensorSugar(){return sensorSugar*bloodToSensorRatio;}
+	float getSensorSugar(){return sensorSugar;}
 };
 
 class BodyChem

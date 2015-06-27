@@ -67,6 +67,8 @@ void BloodChem::initialize()
 
 	renalThreshold = 200; //mg/dL
 	renalTimeConst = 360; //min
+	liverThreshold = 500; //mg/dL
+	liverToSugarRate = 0.75; //(mg/dL)/min
 	insulinTimeConst = 5; //min
 	sugarInsulinRateConst = 8; //(mg/dL)/(min*units)
 }
@@ -82,6 +84,10 @@ void BloodChem::update(StomachChem *stomach, InjectionSiteChem *site, float dt)
 	if(bloodSugar > renalThreshold)
 	{
 		bloodSugarRate += -(bloodSugar - renalThreshold)/renalTimeConst;
+	}
+	if(bloodSugar < liverThreshold)
+	{
+		bloodSugarRate += liverToSugarRate;
 	}
 	bloodSugarRate += -bloodInsulin*sugarInsulinRateConst;
 
@@ -126,3 +132,4 @@ void BodyChem::update(float dt)
 	bloodChem.update(&stomachChem,&injectionSiteChem,dt);
 	sensorSiteChem.update(&bloodChem,dt);
 }
+

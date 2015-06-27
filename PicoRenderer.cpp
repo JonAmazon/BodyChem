@@ -254,7 +254,7 @@ void drawDataStreams(PicoSimulation* xsimulation)
 	glBegin(GL_LINE_STRIP);
 	for(int i = 0; i < DATA_STREAM_SIZE; ++i)
 	{
-		glVertex3f(1.0*i/DATA_STREAM_SIZE,(dstreams->sensorSugarStream[(dstreams->sensorSugarIdx + i)%DATA_STREAM_SIZE])/20.0,0.0);
+		glVertex3f(1.0*i/DATA_STREAM_SIZE,(dstreams->sensorSugarStream[(dstreams->sensorSugarIdx + i)%DATA_STREAM_SIZE])/50.0,0.0);
 	}
 	glEnd();
 	glPopMatrix();

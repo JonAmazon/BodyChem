@@ -4,7 +4,9 @@
 #include "PicoGlobal.h"
 #include "PicoInput.h"
 #include "PicoVec.h"
+#include "StatRand.h"
 #include "BodyChem.h"
+#include "ArtificialPancreas.h"
 
 #define DATA_STREAM_SIZE 256
 
@@ -36,14 +38,25 @@ struct PicoCamera
 class PicoSimulation
 {
 private:
+	int updateCounter,timeMultiplier;
 	float _timeAccum;
+	float timeStep;
 	float _mouseSensitivity;
 
+	float mealTimer;
+	float mutateTimer;
+	float fitnessMetric,bestFitnessMetric;
+
+	stdRan *random;
 	DataStreams dstreams;
 	BodyChem jon;
+	ArtificialPancreas pancreas;
+	ArtificialPancreas bestPancreas;
 
 	PicoCamera _cam;
 
+	float fitnessMetricFunction(float s);
+	void mutateFilters();
 public:
 	void initialize();
 	void update(PicoInput* xinput,float dt);
