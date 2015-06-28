@@ -43,8 +43,9 @@ private:
 	float timeStep;
 	float _mouseSensitivity;
 
-	float mealTimer;
-	float mutateTimer;
+	int mealCount;
+	int mealTimer,mealTimerReset;
+	int mutateTimer,mutateTimerReset;
 	float fitnessMetric,bestFitnessMetric;
 
 	stdRan *random;

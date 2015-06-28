@@ -225,6 +225,7 @@ void drawDataStreams(PicoSimulation* xsimulation)
 	}
 	glEnd();
 
+	glLineWidth(1.0);
 	glBegin(GL_LINES);
 	glColor3f(1.0,0.8,0.8);
 	glVertex3f(0.0,70.0/500.0,0.0);
@@ -232,9 +233,16 @@ void drawDataStreams(PicoSimulation* xsimulation)
 
 	glVertex3f(0.0,120.0/500.0,0.0);
 	glVertex3f(1.0,120.0/500.0,0.0);
+
+	glVertex3f(0.0,200.0/500.0,0.0);
+	glVertex3f(1.0,200.0/500.0,0.0);
+
+	glVertex3f(0.0,300.0/500.0,0.0);
+	glVertex3f(1.0,300.0/500.0,0.0);
 	glEnd();
 	glPopMatrix();
 
+	glLineWidth(3.0);
 	glPushMatrix();
 	glTranslatef(0.0,0.3,0.0);
 	glScalef(1.0,0.1,1.0);

@@ -44,7 +44,7 @@ void InjectionSiteChem::initialize()
 {
 	latentInsulin = 0.0; //units
 
-	latentInsulinTimeConst = 40; //min
+	latentInsulinTimeConst = 15; //min
 
 	bloodInsulinChange = 0.0; //units
 }

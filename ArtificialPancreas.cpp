@@ -12,8 +12,14 @@ void ArtificialPancreas::initialize()
 	bolusReady = 0;
 	pendingBolusAmount = 0.0;
 
+	mealFlag = 0;
+	mealDose = 0.0;
 	mealFactor = 0.0;
 	mealTimeConst = 30.0;
+
+	activeInsulin = 0.0;
+	activeInsulinTimeConst = 60.0;
+	activeInsulinCoeff = 1.0;
 
 	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
 	{
@@ -29,10 +35,16 @@ void ArtificialPancreas::calculatePendingBolus()
 
 	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
 	{
-		pendingBolusAmount += ((1.0-mealFactor)*basalFilter[L] + mealFactor*mealFilter[L])*(sensorLog[(sensorLogIdx + L)%AP_SENSORLOG_LENGTH]);
+		pendingBolusAmount += (basalFilter[L] + mealFactor*mealFilter[L])*(sensorLog[(sensorLogIdx-1-L+AP_SENSORLOG_LENGTH)%AP_SENSORLOG_LENGTH]);
 	}
 	pendingBolusAmount /= AP_SENSORLOG_LENGTH;
-	pendingBolusAmount += 0.183;
+	
+	if(mealFlag)
+	{
+		pendingBolusAmount += mealDose;
+		mealFlag = 0;
+	}
+	pendingBolusAmount -= activeInsulinCoeff*activeInsulin;
 	if(pendingBolusAmount < 0.0){pendingBolusAmount = 0.0;}
 }
 
@@ -68,15 +80,60 @@ void ArtificialPancreas::update(float sensorReading,float dt)
 
 	//Meal Factor Dynamics
 	mealFactor -= (mealFactor/mealTimeConst)*dt;
+
+	//activeInsulinDynamics
+	activeInsulin -= (activeInsulin/activeInsulinTimeConst)*dt;
 }
 
 void ArtificialPancreas::copyFiltersFrom(ArtificialPancreas *other)
 {
 	float *basalFilterO = other->getBasalFilter();
 	float *mealFilterO = other->getMealFilter();
+	float *insulinCoeffO = other->getActiveInsulinCoeff();
+	float *mealDoseO = other->getMealDose();
+
 	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
 	{
 		basalFilter[L] = basalFilterO[L];
 		mealFilter[L] = mealFilterO[L];
+		
 	}
+	activeInsulinCoeff = insulinCoeffO[0];
+	mealDose = mealDoseO[0];
+}
+
+void ArtificialPancreas::printFiltersToFile(const char *fname)
+{
+	FILE *fout = fopen(fname,"w");
+	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
+	{
+		fprintf(fout,"%f\n",basalFilter[L]);
+	}
+	fprintf(fout,"\n");
+	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
+	{
+		fprintf(fout,"%f\n",mealFilter[L]);
+	}
+	fprintf(fout,"\n");
+	fprintf(fout,"%f\n",activeInsulinCoeff);
+	fprintf(fout,"\n");
+	fprintf(fout,"%f\n",mealDose);
+
+	fclose(fout);
+}
+
+void ArtificialPancreas::readFromFile(const char *fname)
+{
+	FILE *fin = fopen(fname,"r");
+	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
+	{
+		fscanf(fin,"%f\n",&basalFilter[L]);
+	}
+	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
+	{
+		fscanf(fin,"%f\n",&mealFilter[L]);
+	}
+
+	fscanf(fin,"%f\n",&activeInsulinCoeff);
+	fscanf(fin,"%f\n",&mealDose);
 }

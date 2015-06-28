@@ -155,8 +155,8 @@ int WINAPI WinMain (HINSTANCE hInst, HINSTANCE hPrev,  LPSTR lpCmd, int nCmdShow
 						  __TEXT("Window"),
 						  WS_OVERLAPPEDWINDOW,
 						  600,100,
-						  1440,
-						  1440,
+						  600,
+						  600,
 						  NULL,NULL,
 						  hInst,
 						  NULL);
@@ -180,7 +180,7 @@ int WINAPI WinMain (HINSTANCE hInst, HINSTANCE hPrev,  LPSTR lpCmd, int nCmdShow
     setvbuf(hf_out, NULL, _IONBF, 1);
     *stdout = *hf_out;
 
-	engine.initialize(hwnd,1440,1440);
+	engine.initialize(hwnd,600,600);
 	
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);

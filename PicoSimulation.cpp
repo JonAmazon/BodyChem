@@ -39,21 +39,26 @@ void PicoSimulation::initialize()
     char bufferB[256];
 
 	updateCounter = 0;
-	timeStep = 0.01;
-	timeMultiplier = 10000;
+	timeStep = 0.1;
+	timeMultiplier = 1000000;
 	_timeAccum = 0.0;
 	_mouseSensitivity = 0.5;
 
-	mealTimer = 360.0;
-	mutateTimer = 14400.0;
+	mealCount = 0;
+	mealTimerReset = 1440*10;
+	mutateTimerReset = 400000*10;
+	mealTimer = mealTimerReset;
+	mutateTimer = mutateTimerReset;
 
 	fitnessMetric = 0.0;
-	bestFitnessMetric = 10000000.0;
+	bestFitnessMetric = 1000000.0;
 
 	random = new stdRan(0);
 	dstreams.initialize();
 	jon.initialize();
 	pancreas.initialize();
+	pancreas.readFromFile("pancreasParams.txt");
+	bestPancreas.initialize();
 
 	//TEMPORARY FOR TESTING
 	_cam._position.setToZero();
@@ -66,85 +71,128 @@ void PicoSimulation::initialize()
 	/////////////////////
 }
 
+float square(float a)
+{
+	return a*a;
+}
+
 float PicoSimulation::fitnessMetricFunction(float s)
 {
-	if(s < 30.0)
+	if(s < 40.0)
 	{
-		return 100000000.0;
+		return 50.0*square(s-80.0);
 	}
-	else if(s < 80.0)
+	else if(s < 60.0)
 	{
-		return 2.0*(s-80.0);
+		return 10.0*square(s-80.0);
 	}
-	else if(s > 120.0)
+	if(s < 80.0)
 	{
-		return s-120.0;
+		return 2.0*square(s-80.0);
 	}
-	else{return 0.0;}
+	else{return square(s-80.0);}
 }
 
 void PicoSimulation::mutateFilters()
 {
+	int filter = 4*(random->doub());
+	float mutationRate = 0.01;
 	float *basal = pancreas.getBasalFilter();
 	float *meal = pancreas.getMealFilter();
+	float *insulinCoeff = pancreas.getActiveInsulinCoeff();
+	float *mealDose = pancreas.getMealDose();
 
 	for(int L = 0; L < AP_SENSORLOG_LENGTH; ++L)
 	{
-		basal[L] += 0.005*(2.0*random->doub()-1.0);
-		meal[L] += 0.005*(2.0*random->doub()-1.0);
+		switch(filter)
+		{
+		case 0:
+			{
+				basal[L] += mutationRate*(2.0*random->doub()-1.0);
+				break;
+			}
+		case 1:
+			{
+				meal[L] += mutationRate*(2.0*random->doub()-1.0);
+				break;
+			}
+		case 2:
+			{
+				if(L == 0)
+				{
+					//insulinCoeff[L] += mutationRate*(2.0*random->doub()-1.0);
+				}
+				break;
+			}
+		case 3:
+			{
+				if(L == 0)
+				{
+					mealDose[L] += mutationRate*(2.0*random->doub()-1.0);
+				}
+				break;
+			}
+		}
 	}
 }
 
 void PicoSimulation::update(PicoInput* xinput,float dtin)
 {
-	float mealCarbs = 100.0*(random->doub()),mealIndex = 0.5*(random->doub());
+	float mealCarbs = 60.0,mealIndex = 1.5*(random->doub());
+	float pTry;
 
 	_timeAccum += dtin;
 	if(_timeAccum > 0.1){_timeAccum = 0.1;}
 	
-	while(_timeAccum > 0.0)
+	for(int n = 0; n < timeMultiplier; ++n)
 	{
 		jon.update(timeStep);
 		pancreas.update(jon.getSensorSugar(),timeStep);
 		fitnessMetric += fitnessMetricFunction(jon.getBloodSugar())*timeStep;
 		updateCounter++;
-		mealTimer -= timeStep;
-		mutateTimer -= timeStep;
-		_timeAccum -= timeStep/timeMultiplier;
-	}
-	dstreams.pushDataToStreams(&jon);
-	//printf("Simulation Time: %f - sensor sugar: %f\n",updateCounter*timeStep,jon.getBloodSugar());
+		mealTimer--;
+		mutateTimer--;
 
-	if(mealTimer < 0.0)
-	{
-		jon.eatMeal(mealCarbs,mealIndex);
-		pancreas.mealFlag();
-		mealTimer = 360.0;
-	}
-
-	if(pancreas.bolusIsPending())
-	{
-		jon.bolusInsulin(pancreas.bolusAmount());
-		pancreas.bolusSuccessful();
-	}
-
-	if(mutateTimer < 0.0)
-	{
-		printf("fitness metric: %f\n",fitnessMetric);
-		if(fitnessMetric < bestFitnessMetric)
+		if(mealTimer == 0)
 		{
-			bestFitnessMetric = fitnessMetric;
-			bestPancreas.copyFiltersFrom(&pancreas);
+			jon.eatMeal(mealCarbs,mealIndex);
+			pancreas.prepareForMeal();
+			mealCount++;
+			mealTimer = mealTimerReset;
 		}
 
-		pancreas.initialize();
-		pancreas.copyFiltersFrom(&bestPancreas);
-		mutateFilters();
-		jon.initialize(); //resets to normal values
+		if(pancreas.bolusIsPending())
+		{
+			jon.bolusInsulin(pancreas.bolusAmount());
+			pancreas.bolusSuccessful();
+		}
 
-		fitnessMetric = 0.0;
-		mutateTimer = 14400.0;
+		if(mutateTimer == 0)
+		{
+			fitnessMetric /= mutateTimerReset*timeStep;
+			pTry = random->doub();
+
+			printf("Fitness Metric: %f %d\n",fitnessMetric,mealCount);
+
+			if(pTry < expf(-(fitnessMetric-bestFitnessMetric)/10.0))
+			{
+				bestFitnessMetric = fitnessMetric;
+				bestPancreas.copyFiltersFrom(&pancreas);
+				bestPancreas.printFiltersToFile("pancreasParams.txt");
+				printf("fitness metric: %f - New Best Found\n",fitnessMetric,bestFitnessMetric);
+			}
+
+			pancreas.initialize();
+			pancreas.copyFiltersFrom(&bestPancreas);
+			mutateFilters();
+			jon.initialize(); //resets to normal values
+
+			fitnessMetric = 0.0;
+			mealCount = 0;
+			mutateTimer = mutateTimerReset;
+		}
 	}
+	dstreams.pushDataToStreams(&jon);
 
 	if(xinput->getKeyWasPressed(VK_SPACE))
 	{
